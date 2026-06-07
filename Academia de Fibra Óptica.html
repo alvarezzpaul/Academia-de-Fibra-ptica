@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Academia de Fibra Óptica</title>
+
+<style>
+:root{
+--bg:#0f172a;
+--card:#1e293b;
+--card2:#334155;
+--accent:#38bdf8;
+--success:#22c55e;
+--danger:#ef4444;
+--text:#f8fafc;
+}
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Segoe UI,Tahoma,sans-serif;
+}
+
+body{
+background:var(--bg);
+color:var(--text);
+padding:20px;
+}
+
+.container{
+max-width:1400px;
+margin:auto;
+}
+
+h1{
+text-align:center;
+margin-bottom:20px;
+color:var(--accent);
+}
+
+.card{
+background:var(--card);
+padding:20px;
+border-radius:15px;
+margin-bottom:20px;
+box-shadow:0 4px 15px rgba(0,0,0,.3);
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+gap:20px;
+}
+
+input,select,button{
+width:100%;
+padding:12px;
+border:none;
+border-radius:10px;
+margin-top:10px;
+}
+
+button{
+background:var(--accent);
+cursor:pointer;
+font-weight:bold;
+}
+
+button:hover{
+opacity:.9;
+}
+
+.result{
+margin-top:15px;
+padding:15px;
+background:var(--card2);
+border-radius:10px;
+}
+
+.buffers{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(90px,1fr));
+gap:10px;
+margin-top:15px;
+}
+
+.buffer{
+padding:10px;
+border-radius:10px;
+text-align:center;
+cursor:pointer;
+color:#000;
+font-weight:bold;
+transition:.2s;
+}
+
+.buffer:hover{
+transform:scale(1.05);
+}
+
+.fibers{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:10px;
+margin-top:15px;
+}
+
+.fiber{
+padding:10px;
+border-radius:8px;
+text-align:center;
+font-weight:bold;
+color:#000;
+}
+
+.question{
+font-size:22px;
+margin-bottom:15px;
+}
+
+.score{
+font-size:20px;
+font-weight:bold;
+}
+
+.timer{
+font-size:22px;
+color:#fbbf24;
+margin-bottom:10px;
+}
+
+.correct{
+background:rgba(34,197,94,.2);
+}
+
+.wrong{
+background:rgba(239,68,68,.2);
+}
+
+@media(max-width:600px){
+.fibers{
+grid-template-columns:repeat(2,1fr);
+}
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Academia de Fibra Óptica</h1>
+
+<div class="grid">
+
+<div class="card">
+<h2>Fibra → Búfer → Hilo</h2>
+
+<select id="cableType">
+<option value="144">144 fibras</option>
+<option value="288">288 fibras</option>
+<option value="432">432 fibras</option>
+</select>
+
+<input type="number" id="fiberInput" placeholder="Número de fibra">
+
+<button onclick="buscarFibra()">Buscar</button>
+
+<div class="result" id="fiberResult"></div>
+</div>
+
+<div class="card">
+<h2>Búfer + Hilo → Fibra</h2>
+
+<input type="number" id="bufferInput" placeholder="Búfer">
+
+<input type="number" id="strandInput" placeholder="Hilo">
+
+<button onclick="buscarPorBuffer()">Calcular</button>
+
+<div class="result" id="bufferResult"></div>
+</div>
+
+</div>
+
+<div class="card">
+<h2>Visualización de Búferes</h2>
+<div class="buffers" id="buffers"></div>
+</div>
+
+<div class="card">
+<h2>Visualización de Hilos</h2>
+<div class="fibers" id="fibers"></div>
+</div>
+
+<div class="card">
+<h2>Modo Práctica</h2>
+
+<div class="question" id="practiceQuestion">
+Presiona Generar
+</div>
+
+<button onclick="generatePractice()">
+Generar Pregunta
+</button>
+
+<input id="practiceAnswer" placeholder="Ej: 10-7">
+
+<button onclick="checkPractice()">
+Validar
+</button>
+
+<div class="result" id="practiceResult"></div>
+</div>
+
+<div class="card">
+<h2>Modo Examen</h2>
+
+<div class="timer" id="timer">
+00:00
+</div>
+
+<div class="score" id="score">
+0 / 0
+</div>
+
+<div class="question" id="examQuestion">
+Presiona Iniciar Examen
+</div>
+
+<input id="examAnswer" placeholder="Ej: 5-6">
+
+<button onclick="startExam()">
+Iniciar Examen
+</button>
+
+<button onclick="submitExam()">
+Responder
+</button>
+
+<div class="result" id="examResult"></div>
+</div>
+
+</div>
+
+<script>
+
+const colors=[
+"Azul",
+"Naranja",
+"Verde",
+"Marrón",
+"Gris",
+"Blanco",
+"Rojo",
+"Negro",
+"Amarillo",
+"Violeta",
+"Rosa",
+"Aqua"
+];
+
+const colorHex=[
+"#3b82f6",
+"#f97316",
+"#22c55e",
+"#92400e",
+"#9ca3af",
+"#ffffff",
+"#ef4444",
+"#000000",
+"#facc15",
+"#8b5cf6",
+"#ec4899",
+"#67e8f9"
+];
+
+function renderBuffers(){
+
+let total=
+parseInt(document.getElementById("cableType").value)/12;
+
+let html="";
+
+for(let i=1;i<=total;i++){
+
+let c=colorHex[(i-1)%12];
+
+html+=`
+<div class="buffer"
+style="background:${c}"
+onclick="showBuffer(${i})">
+B${i}
+</div>
+`;
+}
+
+document.getElementById("buffers").innerHTML=html;
+}
+
+function showBuffer(buffer){
+
+let html="";
+
+for(let i=1;i<=12;i++){
+
+html+=`
+<div class="fiber"
+style="background:${colorHex[i-1]}">
+${i}<br>${colors[i-1]}
+</div>
+`;
+}
+
+document.getElementById("fibers").innerHTML=html;
+}
+
+function buscarFibra(){
+
+let fibra=
+parseInt(document.getElementById("fiberInput").value);
+
+let max=
+parseInt(document.getElementById("cableType").value);
+
+if(!fibra || fibra<1 || fibra>max){
+alert("Fibra inválida");
+return;
+}
+
+let buffer=Math.ceil(fibra/12);
+
+let hilo=fibra%12;
+
+if(hilo===0) hilo=12;
+
+let color=colors[hilo-1];
+
+document.getElementById("fiberResult").innerHTML=`
+<b>Fibra:</b> ${fibra}<br>
+<b>Búfer:</b> ${buffer}<br>
+<b>Hilo:</b> ${hilo}<br>
+<b>Color:</b> ${color}
+`;
+}
+
+function buscarPorBuffer(){
+
+let b=parseInt(bufferInput.value);
+let h=parseInt(strandInput.value);
+
+if(!b||!h||h<1||h>12){
+alert("Datos inválidos");
+return;
+}
+
+let fibra=((b-1)*12)+h;
+
+bufferResult.innerHTML=`
+<b>Fibra:</b> ${fibra}
+`;
+}
+
+let practiceFiber;
+let practiceBuffer;
+let practiceStrand;
+
+function generatePractice(){
+
+let max=
+parseInt(document.getElementById("cableType").value);
+
+practiceFiber=
+Math.floor(Math.random()*max)+1;
+
+practiceBuffer=
+Math.ceil(practiceFiber/12);
+
+practiceStrand=
+practiceFiber%12;
+
+if(practiceStrand===0)
+practiceStrand=12;
+
+practiceQuestion.innerHTML=
+`¿Buffer-Hilo de la fibra ${practiceFiber}?`;
+}
+
+function checkPractice(){
+
+let ans=
+practiceAnswer.value.trim();
+
+let correct=
+practiceBuffer+"-"+practiceStrand;
+
+practiceResult.className="result";
+
+if(ans===correct){
+
+practiceResult.classList.add("correct");
+
+practiceResult.innerHTML=
+"Correcto";
+}
+else{
+
+practiceResult.classList.add("wrong");
+
+practiceResult.innerHTML=
+`Incorrecto<br>
+Respuesta: ${correct}`;
+}
+}
+
+let examFiber;
+let examBuffer;
+let examStrand;
+
+let score=0;
+let total=0;
+
+let seconds=0;
+let timerInt;
+
+function startExam(){
+
+score=0;
+total=0;
+seconds=0;
+
+clearInterval(timerInt);
+
+timerInt=setInterval(()=>{
+
+seconds++;
+
+let m=
+String(Math.floor(seconds/60))
+.padStart(2,"0");
+
+let s=
+String(seconds%60)
+.padStart(2,"0");
+
+timer.innerHTML=`${m}:${s}`;
+
+},1000);
+
+nextQuestion();
+}
+
+function nextQuestion(){
+
+let max=
+parseInt(document.getElementById("cableType").value);
+
+examFiber=
+Math.floor(Math.random()*max)+1;
+
+examBuffer=
+Math.ceil(examFiber/12);
+
+examStrand=
+examFiber%12;
+
+if(examStrand===0)
+examStrand=12;
+
+examQuestion.innerHTML=
+`Fibra ${examFiber}`;
+}
+
+function submitExam(){
+
+let ans=
+examAnswer.value.trim();
+
+let correct=
+examBuffer+"-"+examStrand;
+
+total++;
+
+if(ans===correct){
+score++;
+}
+
+score.innerHTML=
+`${score} / ${total}`;
+
+if(total>=20){
+
+clearInterval(timerInt);
+
+examResult.innerHTML=`
+Examen Finalizado<br><br>
+Puntuación: ${score}/20<br>
+Porcentaje:
+${((score/20)*100).toFixed(1)}%
+`;
+
+return;
+}
+
+nextQuestion();
+
+examAnswer.value="";
+}
+
+renderBuffers();
+showBuffer(1);
+
+cableType.addEventListener(
+"change",
+renderBuffers
+);
+
+</script>
+
+</body>
+</html>
